@@ -5,7 +5,7 @@ Bitcoin RPC over Nostr provides a [Model Context Protocol (MCP)](https://modelco
 ## Running server
 
 ```bash
-BITCOIN_RPC_URL=http://127.0.0.1:8332 \
+BITCOIN_RPC_URL=http://127.0.0.1:18443 \
 BITCOIN_RPC_USER=myuser \
 BITCOIN_RPC_PASSWORD=mypass \
 cargo run -- server
