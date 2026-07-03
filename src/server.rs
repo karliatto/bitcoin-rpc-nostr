@@ -280,7 +280,7 @@ impl BitcoinRpcNostrServer {
     }
 }
 
-#[tool_handler]
+#[tool_handler(router = self.tool_router)]
 impl ServerHandler for BitcoinRpcNostrServer {
     fn get_info(&self) -> rmcp::model::ServerInfo {
         InitializeResult::new(ServerCapabilities::builder().enable_tools().build())
@@ -309,8 +309,9 @@ pub async fn run_server() -> anyhow::Result<()> {
         signer,
         NostrServerTransportConfig::default()
             .with_relay_urls(vec![
-                "wss://relay.contextvm.org".to_string(),
-                "wss://nos.lol".to_string(),
+                "ws://localhost:10547".to_string(),
+                // "wss://relay.contextvm.org".to_string(),
+                // "wss://nos.lol".to_string(),
             ])
             .with_announced_server(false),
     )
