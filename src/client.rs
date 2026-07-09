@@ -28,7 +28,7 @@ pub async fn run_client(server_pubkey: String) -> anyhow::Result<()> {
     println!("Discovered {} tool(s).", tools.len());
 
     let result = client
-        .call_tool(CallToolRequestParams::new("get_blockchain_info"))
+        .call_tool(CallToolRequestParams::new("getblockchaininfo"))
         .await?;
 
     if let Some(content) = result.content.first() {
@@ -38,7 +38,7 @@ pub async fn run_client(server_pubkey: String) -> anyhow::Result<()> {
     }
 
     let result = client
-        .call_tool(CallToolRequestParams::new("get_block_count"))
+        .call_tool(CallToolRequestParams::new("getblockcount"))
         .await?;
 
     if let Some(content) = result.content.first() {
@@ -52,7 +52,7 @@ pub async fn run_client(server_pubkey: String) -> anyhow::Result<()> {
     }))?;
 
     let result = client
-        .call_tool(CallToolRequestParams::new("get_raw_mempool").with_arguments(arguments))
+        .call_tool(CallToolRequestParams::new("getrawmempool").with_arguments(arguments))
         .await?;
 
     if let Some(content) = result.content.first() {

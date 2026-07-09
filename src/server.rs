@@ -124,7 +124,10 @@ struct GetBlockFilterParams {
 
 #[tool_router]
 impl BitcoinRpcNostrServer {
-    #[tool(description = "Get current blockchain state (height, chain, difficulty, ...)")]
+    #[tool(
+        name = "getblockchaininfo",
+        description = "Get current blockchain state (height, chain, difficulty, ...)"
+    )]
     async fn get_blockchain_info(&self) -> Result<CallToolResult, ErrorData> {
         let result = self
             .rpc
@@ -137,7 +140,23 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get a block by hash")]
+    #[tool(
+        name = "getnetworkinfo",
+        description = "Get network state (version, connections, relay fee, ...)"
+    )]
+    async fn get_network_info(&self) -> Result<CallToolResult, ErrorData> {
+        let result = self
+            .rpc
+            .call("getnetworkinfo", json!([]))
+            .await
+            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+
+        Ok(CallToolResult::success(vec![Content::text(
+            result.to_string(),
+        )]))
+    }
+
+    #[tool(name = "getblock", description = "Get a block by hash")]
     async fn get_block(
         &self,
         Parameters(GetBlockParams {
@@ -157,7 +176,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get the height of the most-work fully-validated chain")]
+    #[tool(
+        name = "getblockcount",
+        description = "Get the height of the most-work fully-validated chain"
+    )]
     async fn get_block_count(&self) -> Result<CallToolResult, ErrorData> {
         let result = self
             .rpc
@@ -170,7 +192,7 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get the block hash at a given height")]
+    #[tool(name = "getblockhash", description = "Get the block hash at a given height")]
     async fn get_block_hash(
         &self,
         Parameters(GetBlockHashParams { height }): Parameters<GetBlockHashParams>,
@@ -186,7 +208,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get the transaction ids in the mempool (or detailed info when verbose)")]
+    #[tool(
+        name = "getrawmempool",
+        description = "Get the transaction ids in the mempool (or detailed info when verbose)"
+    )]
     async fn get_raw_mempool(
         &self,
         Parameters(GetRawMempoolParams { verbose }): Parameters<GetRawMempoolParams>,
@@ -202,7 +227,7 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get a raw transaction by txid")]
+    #[tool(name = "getrawtransaction", description = "Get a raw transaction by txid")]
     async fn get_raw_transaction(
         &self,
         Parameters(GetRawTransactionParams {
@@ -228,7 +253,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get a block by hash (decoded)")]
+    #[tool(
+        name = "getblock_verbose",
+        description = "Get a block by hash (decoded); variant of getblock"
+    )]
     async fn get_block_info(
         &self,
         Parameters(GetBlockParams {
@@ -248,7 +276,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get a block header by hash (decoded JSON or raw hex)")]
+    #[tool(
+        name = "getblockheader",
+        description = "Get a block header by hash (decoded JSON or raw hex)"
+    )]
     async fn get_block_header_info(
         &self,
         Parameters(GetBlockHeaderParams { blockhash, verbose }): Parameters<GetBlockHeaderParams>,
@@ -265,7 +296,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get the raw hex-encoded block header by hash")]
+    #[tool(
+        name = "getblockheader_hex",
+        description = "Get the raw hex-encoded block header by hash"
+    )]
     async fn get_block_header(
         &self,
         Parameters(GetBlockHeaderRawParams { blockhash }): Parameters<GetBlockHeaderRawParams>,
@@ -282,7 +316,10 @@ impl BitcoinRpcNostrServer {
         )]))
     }
 
-    #[tool(description = "Get the BIP157 content filter for a block by hash")]
+    #[tool(
+        name = "getblockfilter",
+        description = "Get the BIP157 content filter for a block by hash"
+    )]
     async fn get_block_filter(
         &self,
         Parameters(GetBlockFilterParams {
@@ -344,6 +381,7 @@ pub async fn run_server() -> anyhow::Result<()> {
         }
     };
     let pubkey = signer.public_key().to_hex();
+    println!("Public key: {pubkey}");
 
     let transport = NostrServerTransport::new(
         signer,
