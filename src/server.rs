@@ -49,21 +49,45 @@ struct BitcoinRpc {
 /// An error from a single RPC attempt, tagged with whether it is worth retrying.
 struct RpcCallError {
     retryable: bool,
+    /// Whether `source` is safe to relay to clients verbatim. Errors derived
+    /// from a `reqwest::Error` can contain infrastructure details (e.g. the
+    /// node URL) and are not client-safe; messages we construct ourselves are.
+    client_safe: bool,
     source: anyhow::Error,
 }
 
 impl RpcCallError {
-    fn transient(source: anyhow::Error) -> Self {
+    /// A transport-level error derived from `reqwest`. May contain the node
+    /// URL, so it is not surfaced to clients verbatim.
+    fn transport(retryable: bool, source: anyhow::Error) -> Self {
         Self {
-            retryable: true,
+            retryable,
+            client_safe: false,
             source,
         }
     }
 
-    fn permanent(source: anyhow::Error) -> Self {
+    /// An error whose message we constructed ourselves (contains no secrets),
+    /// safe to surface to clients.
+    fn safe(retryable: bool, source: anyhow::Error) -> Self {
         Self {
-            retryable: false,
+            retryable,
+            client_safe: true,
             source,
+        }
+    }
+
+    /// Convert into a client-facing MCP error, sanitizing anything that could
+    /// leak infrastructure details. Non-safe errors are logged server-side.
+    fn into_error_data(self) -> ErrorData {
+        if self.client_safe {
+            ErrorData::internal_error(self.source.to_string(), None)
+        } else {
+            tracing::error!(error = %self.source, "bitcoind request failed");
+            ErrorData::internal_error(
+                "failed to query the Bitcoin node (see server logs)".to_string(),
+                None,
+            )
         }
     }
 }
@@ -73,7 +97,7 @@ impl BitcoinRpc {
     /// and 5xx/429 responses) with exponential backoff. Permanent failures
     /// (auth errors, malformed responses, application-level RPC errors) fail
     /// immediately.
-    async fn call(&self, method: &str, params: Value) -> anyhow::Result<Value> {
+    async fn call(&self, method: &str, params: Value) -> Result<Value, RpcCallError> {
         use backon::{ExponentialBuilder, Retryable};
 
         let policy = ExponentialBuilder::default()
@@ -92,7 +116,6 @@ impl BitcoinRpc {
                 );
             })
             .await
-            .map_err(|e| e.source)
     }
 
     async fn call_once(&self, method: &str, params: &Value) -> Result<Value, RpcCallError> {
@@ -113,10 +136,7 @@ impl BitcoinRpc {
             .map_err(|e| {
                 // Connection and timeout failures are typically transient.
                 let retryable = e.is_timeout() || e.is_connect();
-                RpcCallError {
-                    retryable,
-                    source: e.into(),
-                }
+                RpcCallError::transport(retryable, e.into())
             })?;
 
         // Read the status and body once. bitcoind returns non-JSON bodies
@@ -126,7 +146,7 @@ impl BitcoinRpc {
         let text = resp
             .text()
             .await
-            .map_err(|e| RpcCallError::transient(e.into()))?;
+            .map_err(|e| RpcCallError::transport(true, e.into()))?;
 
         if !status.is_success() {
             let hint = match status {
@@ -143,23 +163,22 @@ impl BitcoinRpc {
             let retryable =
                 status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS;
             let err = anyhow::anyhow!("bitcoind HTTP {status}{hint}: {snippet}");
-            return Err(RpcCallError {
-                retryable,
-                source: err,
-            });
+            return Err(RpcCallError::safe(retryable, err));
         }
 
         let resp: Value = serde_json::from_str(&text).map_err(|_| {
             let snippet: String = text.trim().chars().take(200).collect();
-            RpcCallError::permanent(anyhow::anyhow!(
-                "bitcoind returned a non-JSON response: {snippet}"
-            ))
+            RpcCallError::safe(
+                false,
+                anyhow::anyhow!("bitcoind returned a non-JSON response: {snippet}"),
+            )
         })?;
 
         if let Some(err) = resp.get("error").filter(|e| !e.is_null()) {
-            return Err(RpcCallError::permanent(anyhow::anyhow!(
-                "bitcoind RPC error: {err}"
-            )));
+            return Err(RpcCallError::safe(
+                false,
+                anyhow::anyhow!("bitcoind RPC error: {err}"),
+            ));
         }
         Ok(resp.get("result").cloned().unwrap_or(Value::Null))
     }
@@ -234,7 +253,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockchaininfo", json!([]))
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -250,7 +269,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getnetworkinfo", json!([]))
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -270,7 +289,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblock", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -286,7 +305,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockcount", json!([]))
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -305,7 +324,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockhash", json!([height]))
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -324,7 +343,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getrawmempool", json!([verbose.unwrap_or(false)]))
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -353,7 +372,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getrawtransaction", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -376,7 +395,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblock", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -396,7 +415,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockheader", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -416,7 +435,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockheader", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
@@ -439,7 +458,7 @@ impl BitcoinRpcNostrServer {
             .rpc
             .call("getblockfilter", params)
             .await
-            .map_err(|e| ErrorData::internal_error(e.to_string(), None))?;
+            .map_err(RpcCallError::into_error_data)?;
 
         Ok(CallToolResult::success(vec![Content::text(
             result.to_string(),
