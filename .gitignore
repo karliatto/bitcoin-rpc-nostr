@@ -1,5 +1,9 @@
 /target
 
+# Nix build symlinks (`nix build`, `nix build .#foo` -> result, result-*)
+/result
+/result-*
+
 # Local environment / secrets
 .env
 .env.*

@@ -78,6 +78,74 @@ CLIENT_NOSTR_SECRET_KEY=
 cargo run -p context-btc-client -- <server-pub-key-hex>
 ```
 
+## Running with Nix (from another machine)
+
+The flake exposes prebuilt packages, so any machine with [Nix](https://nixos.org/download)
+(flakes enabled) can run the server or client straight from GitHub — no clone,
+no toolchain setup:
+
+```bash
+# Run the server
+nix run github:karliatto/contextbtc
+
+# Run the client (note the `--` before program arguments)
+nix run github:karliatto/contextbtc#client -- <server-pub-key-hex>
+```
+
+Configuration works the same way as a local run: pass the environment variables
+from the [Configuration](#configuration) table inline, e.g.
+
+```bash
+SERVER_NOSTR_SECRET_KEY=<secret-key-hex> \
+NOSTR_RELAY_URLS=wss://relay.contextvm.org \
+BITCOIN_RPC_URL=http://127.0.0.1:8332 \
+BITCOIN_RPC_USER=myuser \
+BITCOIN_RPC_PASSWORD=mypass \
+nix run github:karliatto/contextbtc
+```
+
+To build without running, or to install into your profile:
+
+```bash
+nix build github:karliatto/contextbtc   # -> ./result/bin/{context-btc-server,context-btc-client}
+nix profile install github:karliatto/contextbtc
+```
+
+### As a NixOS service
+
+For a NixOS host, the flake also provides a module (`nixosModules.default`) that
+runs the server as a hardened systemd service. Add it to the target machine's
+flake:
+
+```nix
+{
+  inputs.contextbtc.url = "github:karliatto/contextbtc";
+
+  outputs = { nixpkgs, contextbtc, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        contextbtc.nixosModules.default
+        {
+          services.context-btc = {
+            enable = true;
+            relayUrls = [ "wss://relay.contextvm.org" ];
+            # Non-secret settings:
+            extraEnvironment.BITCOIN_RPC_URL = "http://127.0.0.1:8332";
+            # Secrets (SERVER_NOSTR_SECRET_KEY, BITCOIN_RPC_USER/PASSWORD, ...)
+            # live in a file read at runtime, never in the Nix store:
+            environmentFile = "/run/secrets/context-btc.env";
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+Then `sudo nixos-rebuild switch`. The service runs as an isolated `DynamicUser`
+with automatic restart.
+
 ## Architecture
 
 This project bridges two distinct protocol layers:
