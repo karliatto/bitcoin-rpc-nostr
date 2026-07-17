@@ -58,7 +58,7 @@ impl BitcoinRpc {
     async fn call_once(&self, method: &str, params: &Value) -> Result<Value, RpcCallError> {
         let body = json!({
             "jsonrpc": "2.0",
-            "id": "context-btc",
+            "id": "contextbtc",
             "method": method,
             "params": params,
         });

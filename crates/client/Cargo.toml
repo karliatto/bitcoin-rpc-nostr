@@ -1,5 +1,5 @@
 [package]
-name = "context-btc-client"
+name = "contextbtc-client"
 version.workspace = true
 edition.workspace = true
 

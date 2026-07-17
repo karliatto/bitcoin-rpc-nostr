@@ -45,15 +45,15 @@ not an error (useful for systemd/Docker where variables are injected directly).
 
 This is a Cargo workspace with two binary crates:
 
-- `crates/server` — the ContextBTC MCP server (`context-btc-server`).
-- `crates/client` — an example client (`context-btc-client`).
+- `crates/server` — the ContextBTC MCP server (`contextbtc-server`).
+- `crates/client` — an example client (`contextbtc-client`).
 
 ## Running server
 
 With a `.env` file in place:
 
 ```bash
-cargo run -p context-btc-server
+cargo run -p contextbtc-server
 ```
 
 Alternatively, set variables inline (these override any `.env` values):
@@ -63,7 +63,7 @@ SERVER_NOSTR_SECRET_KEY=<secret-key-hex> \
 BITCOIN_RPC_URL=http://127.0.0.1:18443 \
 BITCOIN_RPC_USER=myuser \
 BITCOIN_RPC_PASSWORD=mypass \
-cargo run -p context-btc-server
+cargo run -p contextbtc-server
 ```
 
 ## Running client
@@ -75,7 +75,7 @@ CLIENT_NOSTR_SECRET_KEY=
 ```
 
 ```bash
-cargo run -p context-btc-client -- <server-pub-key-hex>
+cargo run -p contextbtc-client -- <server-pub-key-hex>
 ```
 
 ## Running with Nix (from another machine)
@@ -107,7 +107,7 @@ nix run github:karliatto/contextbtc
 To build without running, or to install into your profile:
 
 ```bash
-nix build github:karliatto/contextbtc   # -> ./result/bin/{context-btc-server,context-btc-client}
+nix build github:karliatto/contextbtc   # -> ./result/bin/{contextbtc-server,contextbtc-client}
 nix profile install github:karliatto/contextbtc
 ```
 
@@ -127,14 +127,14 @@ flake:
       modules = [
         contextbtc.nixosModules.default
         {
-          services.context-btc = {
+          services.contextbtc = {
             enable = true;
             relayUrls = [ "wss://relay.contextvm.org" ];
             # Non-secret settings:
             extraEnvironment.BITCOIN_RPC_URL = "http://127.0.0.1:8332";
             # Secrets (SERVER_NOSTR_SECRET_KEY, BITCOIN_RPC_USER/PASSWORD, ...)
             # live in a file read at runtime, never in the Nix store:
-            environmentFile = "/run/secrets/context-btc.env";
+            environmentFile = "/run/secrets/contextbtc.env";
           };
         }
       ];

@@ -35,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let server_pubkey = match std::env::args().nth(1) {
         Some(pubkey) => pubkey,
         None => {
-            eprintln!("Usage: context-btc-client <server_pubkey>");
+            eprintln!("Usage: contextbtc-client <server_pubkey>");
             std::process::exit(1);
         }
     };
