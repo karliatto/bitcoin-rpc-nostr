@@ -6,5 +6,5 @@ async fn main() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    context_btc_server::run().await
+    contextbtc_server::run().await
 }

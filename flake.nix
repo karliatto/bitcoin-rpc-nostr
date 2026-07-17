@@ -56,35 +56,35 @@
           ];
 
         # The compiled workspace. Produces both binaries in $out/bin:
-        # `context-btc-server` and `context-btc-client`.
-        context-btc = pkgs.rustPlatform.buildRustPackage {
-          pname = "context-btc";
+        # `contextbtc-server` and `contextbtc-client`.
+        contextbtc = pkgs.rustPlatform.buildRustPackage {
+          pname = "contextbtc";
           version = "0.1.0";
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
           inherit nativeBuildInputs buildInputs;
           # `nix run` defaults to the server binary.
-          meta.mainProgram = "context-btc-server";
+          meta.mainProgram = "contextbtc-server";
         };
       in
       {
         packages = {
-          default = context-btc;
-          context-btc = context-btc;
+          default = contextbtc;
+          contextbtc = contextbtc;
         };
 
         apps = {
           default = {
             type = "app";
-            program = "${context-btc}/bin/context-btc-server";
+            program = "${contextbtc}/bin/contextbtc-server";
           };
           server = {
             type = "app";
-            program = "${context-btc}/bin/context-btc-server";
+            program = "${contextbtc}/bin/contextbtc-server";
           };
           client = {
             type = "app";
-            program = "${context-btc}/bin/context-btc-client";
+            program = "${contextbtc}/bin/contextbtc-client";
           };
         };
 
@@ -119,17 +119,17 @@
           ...
         }:
         let
-          cfg = config.services.context-btc;
+          cfg = config.services.contextbtc;
         in
         {
-          options.services.context-btc = {
+          options.services.contextbtc = {
             enable = lib.mkEnableOption "ContextBTC MCP server";
 
             package = lib.mkOption {
               type = lib.types.package;
               default = self.packages.${pkgs.system}.default;
-              defaultText = lib.literalExpression "context-btc.packages.\${system}.default";
-              description = "The context-btc package to run.";
+              defaultText = lib.literalExpression "contextbtc.packages.\${system}.default";
+              description = "The contextbtc package to run.";
             };
 
             relayUrls = lib.mkOption {
@@ -152,7 +152,7 @@
             environmentFile = lib.mkOption {
               type = lib.types.nullOr lib.types.path;
               default = null;
-              example = "/run/secrets/context-btc.env";
+              example = "/run/secrets/contextbtc.env";
               description = ''
                 Path to an EnvironmentFile with secrets. Read at service start,
                 so it is never written to the world-readable Nix store.
@@ -161,7 +161,7 @@
           };
 
           config = lib.mkIf cfg.enable {
-            systemd.services.context-btc = {
+            systemd.services.contextbtc = {
               description = "ContextBTC MCP server";
               wantedBy = [ "multi-user.target" ];
               after = [ "network-online.target" ];
