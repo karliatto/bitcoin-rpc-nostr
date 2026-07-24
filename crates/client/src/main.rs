@@ -74,20 +74,20 @@ async fn run(server_pubkey: String) -> anyhow::Result<()> {
         .call_tool(CallToolRequestParams::new("getblockchaininfo"))
         .await?;
 
-    if let Some(content) = result.content.first() {
-        if let rmcp::model::RawContent::Text(text) = &content.raw {
-            println!("Blockchain info: {}", text.text);
-        }
+    if let Some(content) = result.content.first()
+        && let rmcp::model::RawContent::Text(text) = &content.raw
+    {
+        println!("Blockchain info: {}", text.text);
     }
 
     let result = client
         .call_tool(CallToolRequestParams::new("getblockcount"))
         .await?;
 
-    if let Some(content) = result.content.first() {
-        if let rmcp::model::RawContent::Text(text) = &content.raw {
-            println!("Block count: {}", text.text);
-        }
+    if let Some(content) = result.content.first()
+        && let rmcp::model::RawContent::Text(text) = &content.raw
+    {
+        println!("Block count: {}", text.text);
     }
 
     let arguments = serde_json::from_value(serde_json::json!({
@@ -98,10 +98,10 @@ async fn run(server_pubkey: String) -> anyhow::Result<()> {
         .call_tool(CallToolRequestParams::new("get_raw_mempool").with_arguments(arguments))
         .await?;
 
-    if let Some(content) = result.content.first() {
-        if let rmcp::model::RawContent::Text(text) = &content.raw {
-            println!("Raw mempool: {}", text.text);
-        }
+    if let Some(content) = result.content.first()
+        && let rmcp::model::RawContent::Text(text) = &content.raw
+    {
+        println!("Raw mempool: {}", text.text);
     }
 
     client.cancel().await?;

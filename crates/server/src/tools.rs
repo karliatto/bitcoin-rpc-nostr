@@ -373,3 +373,26 @@ impl ServerHandler for BitcoinRpcNostrServer {
             )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_tool_name;
+
+    #[test]
+    fn normalizes_case_and_underscores() {
+        // Bitcoin Core style, snake_case, and mixed case all collapse to the
+        // same canonical form.
+        assert_eq!(normalize_tool_name("getblockhash"), "getblockhash");
+        assert_eq!(normalize_tool_name("get_block_hash"), "getblockhash");
+        assert_eq!(normalize_tool_name("getBlockHash"), "getblockhash");
+        assert_eq!(normalize_tool_name("GET_BLOCK_HASH"), "getblockhash");
+    }
+
+    #[test]
+    fn distinct_names_stay_distinct() {
+        assert_ne!(
+            normalize_tool_name("getblock"),
+            normalize_tool_name("getblockheader")
+        );
+    }
+}
