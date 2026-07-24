@@ -63,6 +63,9 @@
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
           inherit nativeBuildInputs buildInputs;
+          # The e2e tests need external services (bitcoind, a Nostr relay) that
+          # aren't available in the sandboxed build. They run in CI instead.
+          doCheck = false;
           # `nix run` defaults to the server binary.
           meta.mainProgram = "contextbtc-server";
         };
@@ -94,10 +97,15 @@
           packages = [
             rustToolchain
             pkgs.nak
+            # bitcoind for the e2e integration tests (corepc-node finds it via
+            # BITCOIND_EXE below). nak provides the local relay (`nak serve`).
+            pkgs.bitcoind
           ];
 
           env = {
             RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+            # corepc-node resolves the bitcoind binary from this first.
+            BITCOIND_EXE = "${pkgs.bitcoind}/bin/bitcoind";
           };
 
           shellHook = ''

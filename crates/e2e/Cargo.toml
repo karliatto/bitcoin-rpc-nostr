@@ -1,0 +1,21 @@
+[package]
+name = "contextbtc-e2e"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+# No runtime code — this crate exists only to host the integration tests in
+# `tests/`. An empty lib target gives Cargo something to attach them to.
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]
+anyhow.workspace = true
+# Spawns and manages a regtest bitcoind for the duration of a test. Finds the
+# binary via BITCOIND_EXE / PATH (no `download` feature — the devShell and CI
+# provide bitcoind).
+corepc-node = "0.12.0"
+# Builds and locates the workspace binaries (server, client) from within a test.
+escargot = "0.5"
+# Bounds how long we wait on the client subprocess so a hang fails fast.
+wait-timeout = "0.2"

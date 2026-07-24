@@ -1,0 +1,5 @@
+[toolchain]
+# Pinned so Nix and non-Nix builds use the same compiler. flake.nix reads this
+# file via `fromRustupToolchainFile` when it exists.
+channel = "1.96.1"
+components = ["rustfmt", "clippy", "rust-src", "rust-analyzer"]
