@@ -78,6 +78,36 @@ CLIENT_NOSTR_SECRET_KEY=
 cargo run -p contextbtc-client -- <server-pub-key-hex>
 ```
 
+## Testing
+
+```bash
+cargo test --workspace
+```
+
+Most tests are pure unit tests. The end-to-end test in `crates/e2e` exercises the
+full path — it starts a local Nostr relay (`nak serve`), a regtest `bitcoind`
+(managed by [`corepc-node`](https://github.com/rust-bitcoin/corepc)), runs the
+real server against that node, then runs the real client and checks it receives
+live regtest data.
+
+That test needs `bitcoind` and `nak` available. The dev shell provides both, so
+the simplest way to run the whole suite is:
+
+```bash
+nix develop --command cargo test --workspace
+```
+
+Outside the dev shell, make `nak` available on `PATH` and point `corepc-node` at a
+bitcoind binary via `BITCOIND_EXE`. The e2e test **fails** if either is missing —
+it never silently skips — so `cargo test` needs both present. This is the same
+command CI runs (see `.github/workflows/ci.yml`).
+
+Running e2e tests only with logs:
+
+```bash
+cargo test -p contextbtc-e2e -- --nocapture
+```
+
 ## Running with Nix (from another machine)
 
 The flake exposes prebuilt packages, so any machine with [Nix](https://nixos.org/download)
